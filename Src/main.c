@@ -114,14 +114,14 @@ int main(void)
   MX_CAN1_Init();
   MX_DCMI_Init();
   MX_I2C1_Init();
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
   MX_RTC_Init();
   MX_SDIO_SD_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
 
   /* USER CODE BEGIN 2 */
-
+  HAL_UART_Transmit(&huart3, (uint8_t*)"proba-start\n\r", 13, 100);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
