@@ -59,6 +59,7 @@
 
 /* Variables -----------------------------------------------------------------*/
 osThreadId defaultTaskHandle;
+//osTimerId mainTimerHandle;
 
 /* USER CODE BEGIN Variables */
 UART_HandleTypeDef huart3;
@@ -67,12 +68,17 @@ SICL_InitTypeDef SICL;
 uint8_t last=0;
 char tmp=0;
 static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
+TaskHandle_t ltmTaskHandle = NULL;
 char SICL_RX[64];
-osThreadId commTaskHandle;
+
+int period = 0;
+
+TimerHandle_t mainTimer;
 /* USER CODE END Variables */
 
 /* Function prototypes -------------------------------------------------------*/
 void StartDefaultTask(void const * argument);
+
 
 extern void MX_FATFS_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -81,6 +87,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void SICL_process(void const * argument);
 void proba1(void const * argument);
 void proba2(void const * argument);
+void mainTimerCallback(TimerHandle_t xTimer);
 
 //void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart3);
 /* USER CODE END FunctionPrototypes */
@@ -102,8 +109,27 @@ void MX_FREERTOS_Init(void) {
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
+  /* Create the timer(s) */
+  /* definition and creation of mainTimer */
+//  osTimerDef(mainTimer, mainTimerCallback);
+//  mainTimerHandle = osTimerCreate(osTimer(mainTimer), osTimerPeriodic, NULL);
+
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+
+  mainTimer = xTimerCreate("Timer", ( 1000 / portTICK_PERIOD_MS), pdTRUE, ( void * ) 0, mainTimerCallback );
+  if( mainTimer == NULL)
+  {
+	  HAL_UART_Transmit(&huart3, (uint8_t*)"timer not created\n\r", 19, 100);
+  }
+  else
+  {
+	  if( xTimerStart(mainTimer, 0) != pdPASS)
+	  {
+		  HAL_UART_Transmit(&huart3, (uint8_t*)"timer not started\n\r", 19, 100);
+	  }
+  }
+
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the thread(s) */
@@ -112,9 +138,10 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
+
 //  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
-//  xTaskCreate(proba1, "p1", 500, NULL, osPriorityNormal, &xTask1);
-  xTaskCreate(proba2, "p2", 1500, NULL, osPriorityNormal, &xTask2);
+  xTaskCreate(TMLTM_TX, "LowSpeedTelemetry TX", 500, NULL, osPriorityNormal, &ltmTaskHandle);
+  xTaskCreate(proba2, "p2", 1500, NULL, 2, &xTask2);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -127,14 +154,15 @@ void StartDefaultTask(void const * argument)
 {
   /* init code for FATFS */
   MX_FATFS_Init();
-  int i=0;
+
   /* USER CODE BEGIN StartDefaultTask */
+  int i=0;
   /* Infinite loop */
   for(;;)
   {
       /* Send a notification to prvTask2(), bringing it out of the Blocked
       state. */
-	  if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 100) == HAL_OK)
+/*	  if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 3000) == HAL_OK)
 	  {
 		  SICL.RX[i] = tmp;
 		  i++;
@@ -145,6 +173,10 @@ void StartDefaultTask(void const * argument)
 			  xTaskNotifyGive( xTask2 );
 		  }
 	  }
+	  else
+	  {
+		  HAL_UART_Transmit(&huart3, (uint8_t*)"timeout\n\r", 9, 100);
+	  }*/
 	  osDelay(0);
 
 
@@ -153,6 +185,9 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END StartDefaultTask */
 }
+
+/* mainTimerCallback function */
+
 
 /* USER CODE BEGIN Application */
 
@@ -193,16 +228,28 @@ void proba2(void const * argument)
         	tmp = SICL.RX[i];
             HAL_UART_Transmit(&huart3, &tmp, 1, 100);
         }*/
-        HAL_UART_Transmit(&huart3, &SICL.RX, strlen(SICL.RX), 100);
+ //       HAL_UART_Transmit(&huart3, (uint8_t*)&SICL.RX, strlen(SICL.RX), 100);
+        xTimerReset( mainTimer, 0);
         clearSICL_RX();
         char proba[] = {'1', '2' , ',' , '3'};
-        SICL_TX_msg("com", proba, 0);
+        SICL_TX_msg("com", proba);
         osDelay(200);
     }
 }
 
 
+void mainTimerCallback(TimerHandle_t xTimer)
+{
+  /* USER CODE BEGIN mainTimerCallback */
+	period++;
+	if( period > 10)
+	{
+		period = 0;
+		xTaskNotifyGive( ltmTaskHandle );
+	}
 
+  /* USER CODE END mainTimerCallback */
+}
 
 /* USER CODE END Application */
 

@@ -5,7 +5,7 @@
  *      Author: Komposzt
  */
 
-
+#include "checksum.h"
 #include <stdio.h>
 #include <string.h>
 

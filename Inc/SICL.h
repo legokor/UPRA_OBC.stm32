@@ -23,17 +23,24 @@
 
 typedef struct
 {
-	char RX[64];
-	char TX[64];
+	char RX[82];
+	int  RXindex;
+	char TX[82];
 	char CMD[3];
-	char msgPayload[55];
+	char msgPayload[73];
 } SICL_InitTypeDef;
 
 
 
 /* Private function prototypes -----------------------------------------------*/
-int SICL_TX_msg(char* cmd, char* msg, int isReply);
+int SICL_TX_msg(char* cmd, char* msg);
 void SICL_NMEA_parser(uint8_t* msg);
+void TMLTM_TX(void const * argument);
+void getTChousekeeping(void);
+
+int SICL_RX_msg(void);
+
 void clearSICL_RX(void);
+void clearSICL_TX(void);
 
 #endif /* SICL_H_ */
