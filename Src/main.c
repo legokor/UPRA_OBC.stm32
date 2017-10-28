@@ -62,6 +62,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
+#include "SICL.h"
 
 /* USER CODE END Includes */
 

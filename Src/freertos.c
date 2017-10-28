@@ -54,6 +54,7 @@
 /* USER CODE BEGIN Includes */     
 #include "stm32f4xx_hal.h"
 #include <string.h>
+#include "SICL.h"
 /* USER CODE END Includes */
 
 /* Variables -----------------------------------------------------------------*/
@@ -61,6 +62,8 @@ osThreadId defaultTaskHandle;
 
 /* USER CODE BEGIN Variables */
 UART_HandleTypeDef huart3;
+SICL_InitTypeDef SICL;
+
 uint8_t last=0;
 char tmp=0;
 static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
@@ -78,7 +81,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void SICL_process(void const * argument);
 void proba1(void const * argument);
 void proba2(void const * argument);
-void clearSICL_RX(void);
+
 //void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart3);
 /* USER CODE END FunctionPrototypes */
 
@@ -111,7 +114,7 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
 //  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
 //  xTaskCreate(proba1, "p1", 500, NULL, osPriorityNormal, &xTask1);
-  xTaskCreate(proba2, "p2", 500, NULL, osPriorityNormal, &xTask2);
+  xTaskCreate(proba2, "p2", 1500, NULL, osPriorityNormal, &xTask2);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -133,7 +136,7 @@ void StartDefaultTask(void const * argument)
       state. */
 	  if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 100) == HAL_OK)
 	  {
-		  SICL_RX[i] = tmp;
+		  SICL.RX[i] = tmp;
 		  i++;
 		  if(tmp == '\n')
 		  {
@@ -153,13 +156,6 @@ void StartDefaultTask(void const * argument)
 
 /* USER CODE BEGIN Application */
 
-void clearSICL_RX(void)
-{
-	for(int i=0; i<64; i++)
-	{
-		SICL_RX[i] = 0;
-	}
-}
 
 void SICL_process(void const * argument)
 {
@@ -192,13 +188,15 @@ void proba2(void const * argument)
         state. */
  //       xTaskNotifyGive( xTask1 );
         HAL_UART_Transmit(&huart3, (uint8_t*)"task2\n\r", 7, 100);
-        for(int i = 0; i < strlen(SICL_RX)+1; i++)
+/*        for(int i = 0; i < strlen(SICL.RX)+1; i++)
         {
-        	tmp = SICL_RX[i];
+        	tmp = SICL.RX[i];
             HAL_UART_Transmit(&huart3, &tmp, 1, 100);
-        }
-        //HAL_UART_Transmit(&huart3, SICL_RX, strlen(SICL_RX), 100);
+        }*/
+        HAL_UART_Transmit(&huart3, &SICL.RX, strlen(SICL.RX), 100);
         clearSICL_RX();
+        char proba[] = {'1', '2' , ',' , '3'};
+        SICL_TX_msg("com", proba, 0);
         osDelay(200);
     }
 }
