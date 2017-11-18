@@ -26,24 +26,10 @@ int SICL_TX_msg(char* cmd, char* msg)
 	SICL.TX[1] = 'T';
 	SICL.TX[2] = 'M';
 
-	for( i = 0; i < 3; i++)
-	{
-		SICL.TX[msg_len + i] = cmd[i];
-	}
 
-	msg_len += 3;
+	sprintf(SICL.TX, "%s%s,%s*", SICL.TX, cmd, msg );
 
-	SICL.TX[msg_len++] = ',';
-
-	for( i = 0; i < strlen(msg); i++)
-	{
-		SICL.TX[msg_len + i] = msg[i];
-	}
-
-	msg_len += i;
-
-	SICL.TX[msg_len++] = '*';
-
+	msg_len += strlen(msg) + 4;
 
 	/*SICL.TX[msg_len++] = 'c';
 	SICL.TX[msg_len++] = 'c';*/
@@ -54,10 +40,6 @@ int SICL_TX_msg(char* cmd, char* msg)
 	HAL_UART_Transmit(&huart3, (uint8_t*)SICL.TX, msg_len, 100);
 
 	clearSICL_TX();
-/*	HAL_UART_Transmit(&huart3, "$TM", 3, 100);
-	HAL_UART_Transmit(&huart3, cmd, strlen(cmd), 100);
-	HAL_UART_Transmit(&huart3, ",", 1, 100);
-	HAL_UART_Transmit(&huart3, cmd, strlen(cmd), 100);*/
 	return 0;
 }
 
@@ -83,7 +65,6 @@ void clearSICL_TX(void)
 }
 
 
-//TODO: Debug this part of the receiver
 int SICL_RX_msg(void)
 {
 	char tmp=0;
@@ -125,11 +106,15 @@ int SICL_RX_msg(void)
 	return 3;
 }
 
-void getTChousekeeping(void)
+void getTChousekeeping(submodule module)
 {
 	int error=10;
 
-	SICL_TX_msg("HKR", "C,");
+	switch (module)
+	{
+		case COM: SICL_TX_msg("HKR", "C"); break;
+		default: break;
+	}
 
 	error = SICL_RX_msg();
 
@@ -138,16 +123,16 @@ void getTChousekeeping(void)
 
 void TMLTM_TX(void const * argument)
 {
-	uint32_t ulNotificationValue;
+//	uint32_t ulNotificationValue;
 
 	for(;;)
 	{
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
 
-		getTChousekeeping();
+		getTChousekeeping(COM);
 
 
-
+		//TODO : Add proper message structure
 		SICL_TX_msg("LTM", "336677,+4545.222,+01133.555,00236,0236,0235");
 
 	}

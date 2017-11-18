@@ -71,7 +71,8 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -123,7 +124,7 @@ int main(void)
   MX_USART3_UART_Init();
 
   /* USER CODE BEGIN 2 */
-  HAL_UART_Transmit(&huart3, (uint8_t*)"proba-start\n\r", 13, 100);
+  HAL_UART_Transmit(&huart2, (uint8_t*)"proba-start\n\r", 13, 100);
 
 
   /* USER CODE END 2 */
@@ -132,8 +133,8 @@ int main(void)
   MX_FREERTOS_Init();
 
   /* Start scheduler */
-  //osKernelStart();
-  vTaskStartScheduler();
+  osKernelStart();
+  
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */

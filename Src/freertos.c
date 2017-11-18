@@ -59,10 +59,11 @@
 
 /* Variables -----------------------------------------------------------------*/
 osThreadId defaultTaskHandle;
-//osTimerId mainTimerHandle;
 
 /* USER CODE BEGIN Variables */
 UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart2;
+IWDG_HandleTypeDef hiwdg;
 SICL_InitTypeDef SICL;
 
 uint8_t last=0;
@@ -78,7 +79,6 @@ TimerHandle_t mainTimer;
 
 /* Function prototypes -------------------------------------------------------*/
 void StartDefaultTask(void const * argument);
-
 
 extern void MX_FATFS_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -108,11 +108,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
-
-  /* Create the timer(s) */
-  /* definition and creation of mainTimer */
-//  osTimerDef(mainTimer, mainTimerCallback);
-//  mainTimerHandle = osTimerCreate(osTimer(mainTimer), osTimerPeriodic, NULL);
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
@@ -160,22 +155,26 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+	  //HAL_IWDG_Refresh(&hiwdg);
       /* Send a notification to prvTask2(), bringing it out of the Blocked
       state. */
 /*	  if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 3000) == HAL_OK)
 	  {
+		  HAL_IWDG_Refresh(&hiwdg);
 		  SICL.RX[i] = tmp;
+		 // HAL_UART_Transmit(&huart2, (uint8_t*)tmp, 1, 100);
 		  i++;
 		  if(tmp == '\n')
 		  {
 			  tmp = 0;
+			  HAL_UART_Transmit(&huart2, (uint8_t*)SICL.RX, i, 100);
 			  i = 0;
-			  xTaskNotifyGive( xTask2 );
+			  //xTaskNotifyGive( xTask2 );
 		  }
 	  }
 	  else
 	  {
-		  HAL_UART_Transmit(&huart3, (uint8_t*)"timeout\n\r", 9, 100);
+		  HAL_UART_Transmit(&huart2, (uint8_t*)"timeout\n\r", 9, 100);
 	  }*/
 	  osDelay(0);
 
@@ -185,9 +184,6 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END StartDefaultTask */
 }
-
-/* mainTimerCallback function */
-
 
 /* USER CODE BEGIN Application */
 
