@@ -55,6 +55,7 @@
 #include "stm32f4xx_hal.h"
 #include <string.h>
 #include "SICL.h"
+#include "flight_data.h"
 /* USER CODE END Includes */
 
 /* Variables -----------------------------------------------------------------*/

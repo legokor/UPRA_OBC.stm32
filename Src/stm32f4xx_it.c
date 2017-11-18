@@ -51,7 +51,6 @@ extern DMA_HandleTypeDef hdma_dcmi;
 * @brief This function handles Non maskable interrupt.
 */
 
-
 /**
 * @brief This function handles Hard fault interrupt.
 */
@@ -119,6 +118,7 @@ void UsageFault_Handler(void)
 /**
 * @brief This function handles System service call via SWI instruction.
 */
+
 
 /**
 * @brief This function handles Debug monitor.

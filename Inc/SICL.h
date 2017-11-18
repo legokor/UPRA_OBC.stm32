@@ -1,3 +1,5 @@
+/* USER CODE BEGIN 0 */
+
 /*
  * SICL.h
  *
@@ -40,7 +42,7 @@ typedef enum
 
 /* Private function prototypes -----------------------------------------------*/
 int SICL_TX_msg(char* cmd, char* msg);
-void SICL_NMEA_parser(uint8_t* msg);
+void SICL_NMEA_parser(void const * argument);
 void TMLTM_TX(void const * argument);
 void getTChousekeeping(submodule module);
 
@@ -50,3 +52,5 @@ void clearSICL_RX(void);
 void clearSICL_TX(void);
 
 #endif /* SICL_H_ */
+
+/* USER CODE END 0 */

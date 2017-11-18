@@ -50,6 +50,7 @@
 #include "main.h"
 #include "stm32f4xx_hal.h"
 #include "cmsis_os.h"
+#include "adc.h"
 #include "can.h"
 #include "dcmi.h"
 #include "dma.h"
@@ -64,6 +65,7 @@
 /* USER CODE BEGIN Includes */
 #include "SICL.h"
 #include "checksum.h"
+#include "flight_data.h"
 
 /* USER CODE END Includes */
 
@@ -122,6 +124,7 @@ int main(void)
   MX_SDIO_SD_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  MX_ADC1_Init();
 
   /* USER CODE BEGIN 2 */
   HAL_UART_Transmit(&huart2, (uint8_t*)"proba-start\n\r", 13, 100);

@@ -10,10 +10,11 @@
 #include "SICL.h"
 #include "checksum.h"
 #include <stdio.h>
+#include "flight_data.h"
 
 UART_HandleTypeDef huart3;
 SICL_InitTypeDef SICL;
-
+HouseKeeping_InitTypeDef com;
 
 int SICL_TX_msg(char* cmd, char* msg)
 {
@@ -35,7 +36,7 @@ int SICL_TX_msg(char* cmd, char* msg)
 	SICL.TX[msg_len++] = 'c';*/
 
 	sprintf(SICL.TX, "%s%02X\n\r", SICL.TX, NMEAchecksum(SICL.TX));
-	msg_len += 4;
+	msg_len += 5;
 
 	HAL_UART_Transmit(&huart3, (uint8_t*)SICL.TX, msg_len, 100);
 
@@ -43,8 +44,48 @@ int SICL_TX_msg(char* cmd, char* msg)
 	return 0;
 }
 
-void SICL_NMEA_parser(uint8_t* msg)
+void SICL_NMEA_parser(void const * argument)
 {
+	int i, j, k, IntegerPart;
+
+	IntegerPart = 1;
+
+	com.temp = 0;
+	com.VCC = 0;
+
+	if ((SICL.RX[1] == 'T') && (SICL.RX[2] == 'C') && (SICL.RX[3] == 'H') && (SICL.RX[4] == 'K') && (SICL.RX[5] == 'D'))
+	{
+		for (i=0, j=0, k=0; (i<SICL.RXindex) && (j<10); i++)
+		{
+			if (SICL.RX[i] == ',')
+			{
+				j++;    // Segment index
+				k=0;    // Index into target variable
+				IntegerPart = 1;
+			}
+			else
+			{
+				if (j == 1)
+				{
+					if ((SICL.RX[i] >= '0') && (SICL.RX[i] <= '9'))
+					{
+						com.temp *= 10;
+						com.temp += (SICL.RX[i] - '0');
+						k++;
+					}
+				}
+				else if (j == 2)
+				{
+					if ((SICL.RX[i] >= '0') && (SICL.RX[i] <= '9'))
+					{
+						com.VCC *= 10;
+						com.VCC += (SICL.RX[i] - '0');
+						k++;
+					}
+				}
+			}
+		}
+	}
 
 }
 
@@ -71,6 +112,8 @@ int SICL_RX_msg(void)
 	SICL.RXindex=0;
 	int timeout=0;
 
+	char* debug[30]; //for debug only
+
 	for(;;)
 	{
 		if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 1000) == HAL_OK)
@@ -88,9 +131,12 @@ int SICL_RX_msg(void)
 		    if (tmp == '\n')
 		    {
 		    	// TODO : Processing function
-				HAL_UART_Transmit(&huart3, (uint8_t*)SICL.RX, SICL.RXindex, 100); //debug only
+		    	SICL_NMEA_parser(1);
+
+				sprintf((char*)debug, "\x1B[32mcom temperature: %d, com voltage: %d\n\r\x1B[37m", com.temp, com.VCC);
+				HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100); //debug only
 		    	return 0; //for debug only
-		    	SICL.RXindex = 0;
+		    	//SICL.RXindex = 0;
 		    }
 		}
 		else
