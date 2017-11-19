@@ -52,14 +52,31 @@
 #include "cmsis_os.h"
 
 /* USER CODE BEGIN Includes */     
-
+#include "stm32f4xx_hal.h"
+#include <string.h>
+#include "SICL.h"
+#include "flight_data.h"
 /* USER CODE END Includes */
 
 /* Variables -----------------------------------------------------------------*/
 osThreadId defaultTaskHandle;
 
 /* USER CODE BEGIN Variables */
+UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart2;
+IWDG_HandleTypeDef hiwdg;
+SICL_InitTypeDef SICL;
 
+uint8_t last=0;
+char tmp=0;
+static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
+TaskHandle_t ltmTaskHandle = NULL;
+//extern osThreadId  siclNMEATaskHandle = NULL;
+char SICL_RX[64];
+
+int period = 0;
+
+TimerHandle_t mainTimer;
 /* USER CODE END Variables */
 
 /* Function prototypes -------------------------------------------------------*/
@@ -69,7 +86,12 @@ extern void MX_FATFS_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* USER CODE BEGIN FunctionPrototypes */
+void SICL_process(void const * argument);
+void proba1(void const * argument);
+void proba2(void const * argument);
+void mainTimerCallback(TimerHandle_t xTimer);
 
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart3);
 /* USER CODE END FunctionPrototypes */
 
 /* Hook prototypes */
@@ -78,7 +100,7 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
-       
+
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -91,6 +113,20 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+
+  mainTimer = xTimerCreate("Timer", ( 1000 / portTICK_PERIOD_MS), pdTRUE, ( void * ) 0, mainTimerCallback );
+  if( mainTimer == NULL)
+  {
+	  HAL_UART_Transmit(&huart3, (uint8_t*)"timer not created\n\r", 19, 100);
+  }
+  else
+  {
+	  if( xTimerStart(mainTimer, 0) != pdPASS)
+	  {
+		  HAL_UART_Transmit(&huart3, (uint8_t*)"timer not started\n\r", 19, 100);
+	  }
+  }
+
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the thread(s) */
@@ -99,7 +135,10 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+
+//  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
+  xTaskCreate(TMLTM_TX, "LowSpeedTelemetry TX", 500, NULL, osPriorityNormal, &ltmTaskHandle);
+  xTaskCreate(proba2, "p2", 1500, NULL, 2, &xTask2);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -114,16 +153,106 @@ void StartDefaultTask(void const * argument)
   MX_FATFS_Init();
 
   /* USER CODE BEGIN StartDefaultTask */
+  int i=0;
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+	  //HAL_IWDG_Refresh(&hiwdg);
+      /* Send a notification to prvTask2(), bringing it out of the Blocked
+      state. */
+/*	  if(HAL_UART_Receive(&huart3, (uint8_t*)&tmp, 1, 3000) == HAL_OK)
+	  {
+		  HAL_IWDG_Refresh(&hiwdg);
+		  SICL.RX[i] = tmp;
+		 // HAL_UART_Transmit(&huart2, (uint8_t*)tmp, 1, 100);
+		  i++;
+		  if(tmp == '\n')
+		  {
+			  tmp = 0;
+			  HAL_UART_Transmit(&huart2, (uint8_t*)SICL.RX, i, 100);
+			  i = 0;
+			  //xTaskNotifyGive( xTask2 );
+		  }
+	  }
+	  else
+	  {
+		  HAL_UART_Transmit(&huart2, (uint8_t*)"timeout\n\r", 9, 100);
+	  }*/
+	  osDelay(0);
+
+
+      /* Block to wait for prvTask2() to notify this task. */
+ //     ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
   }
   /* USER CODE END StartDefaultTask */
 }
 
 /* USER CODE BEGIN Application */
-     
+
+
+void SICL_process(void const * argument)
+{
+
+
+}
+
+void proba1(void const * argument)
+{
+    for( ;; )
+    {
+        /* Send a notification to prvTask2(), bringing it out of the Blocked
+        state. */
+    	HAL_UART_Transmit(&huart3, (uint8_t*)"task1\n\r", 7, 100);
+    	xTaskNotifyGive( xTask2 );
+    	osDelay(200);
+        /* Block to wait for prvTask2() to notify this task. */
+        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+    }
+}
+
+void proba2(void const * argument)
+{
+	for( ;; )
+    {
+        /* Block to wait for prvTask1() to notify this task. */
+        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+        /* Send a notification to prvTask1(), bringing it out of the Blocked
+        state. */
+ //       xTaskNotifyGive( xTask1 );
+        HAL_UART_Transmit(&huart3, (uint8_t*)"task2\n\r", 7, 100);
+/*        for(int i = 0; i < strlen(SICL.RX)+1; i++)
+        {
+        	tmp = SICL.RX[i];
+            HAL_UART_Transmit(&huart3, &tmp, 1, 100);
+        }*/
+ //       HAL_UART_Transmit(&huart3, (uint8_t*)&SICL.RX, strlen(SICL.RX), 100);
+        xTimerReset( mainTimer, 0);
+        clearSICL_RX();
+        char proba[] = {'1', '2' , ',' , '3'};
+        SICL_TX_msg("com", proba);
+        osDelay(200);
+    }
+}
+
+
+void mainTimerCallback(TimerHandle_t xTimer)
+{
+  /* USER CODE BEGIN mainTimerCallback */
+	period++;
+	if( period > 20 )
+	{
+		sendStatus("zeroing");
+		period = 0;
+	}
+	if( (period%10) == 0)
+	{
+		xTaskNotifyGive( ltmTaskHandle );
+	}
+
+  /* USER CODE END mainTimerCallback */
+}
+
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,8 +1,8 @@
 /**
   ******************************************************************************
-  * File Name          : RTC.c
+  * File Name          : ADC.c
   * Description        : This file provides code for the configuration
-  *                      of the RTC instances.
+  *                      of the ADC instances.
   ******************************************************************************
   * This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
@@ -48,99 +48,79 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "rtc.h"
+#include "adc.h"
 
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
-RTC_HandleTypeDef hrtc;
-RTC_TimeTypeDef sTime;
-RTC_DateTypeDef sDate;
+ADC_HandleTypeDef hadc1;
 
-/* RTC init function */
-void MX_RTC_Init(void)
+/* ADC1 init function */
+void MX_ADC1_Init(void)
 {
-  RTC_AlarmTypeDef sAlarm;
+  ADC_ChannelConfTypeDef sConfig;
 
-    /**Initialize RTC Only 
+    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
     */
-  hrtc.Instance = RTC;
-  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-  hrtc.Init.AsynchPrediv = 127;
-  hrtc.Init.SynchPrediv = 255;
-  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
 
-    /**Initialize RTC and set the Time and Date 
+    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
     */
-  if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != 0x32F2){
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-    HAL_RTCEx_BKUPWrite(&hrtc,RTC_BKP_DR0,0x32F2);
-  }
-    /**Enable the Alarm A 
-    */
-  sAlarm.AlarmTime.Hours = 0x0;
-  sAlarm.AlarmTime.Minutes = 0x0;
-  sAlarm.AlarmTime.Seconds = 0x0;
-  sAlarm.AlarmTime.SubSeconds = 0x0;
-  sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-  sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
-  sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
-  sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
-  sAlarm.AlarmDateWeekDay = 0x1;
-  sAlarm.Alarm = RTC_ALARM_A;
-  if (HAL_RTC_SetAlarm(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
+  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
 
 }
 
-void HAL_RTC_MspInit(RTC_HandleTypeDef* rtcHandle)
+void HAL_ADC_MspInit(ADC_HandleTypeDef* adcHandle)
 {
 
-  if(rtcHandle->Instance==RTC)
+  if(adcHandle->Instance==ADC1)
   {
-  /* USER CODE BEGIN RTC_MspInit 0 */
+  /* USER CODE BEGIN ADC1_MspInit 0 */
 
-  /* USER CODE END RTC_MspInit 0 */
-    /* RTC clock enable */
-    __HAL_RCC_RTC_ENABLE();
-  /* USER CODE BEGIN RTC_MspInit 1 */
+  /* USER CODE END ADC1_MspInit 0 */
+    /* ADC1 clock enable */
+    __HAL_RCC_ADC1_CLK_ENABLE();
+  /* USER CODE BEGIN ADC1_MspInit 1 */
 
-  /* USER CODE END RTC_MspInit 1 */
+  /* USER CODE END ADC1_MspInit 1 */
   }
 }
 
-void HAL_RTC_MspDeInit(RTC_HandleTypeDef* rtcHandle)
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 {
 
-  if(rtcHandle->Instance==RTC)
+  if(adcHandle->Instance==ADC1)
   {
-  /* USER CODE BEGIN RTC_MspDeInit 0 */
+  /* USER CODE BEGIN ADC1_MspDeInit 0 */
 
-  /* USER CODE END RTC_MspDeInit 0 */
+  /* USER CODE END ADC1_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_RTC_DISABLE();
-  /* USER CODE BEGIN RTC_MspDeInit 1 */
+    __HAL_RCC_ADC1_CLK_DISABLE();
+  /* USER CODE BEGIN ADC1_MspDeInit 1 */
 
-  /* USER CODE END RTC_MspDeInit 1 */
+  /* USER CODE END ADC1_MspDeInit 1 */
   }
 } 
 
