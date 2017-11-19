@@ -129,7 +129,7 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   HAL_UART_Transmit(&huart2, (uint8_t*)"proba-start\n\r", 13, 100);
-  sendStatus("startup");
+  sendStatusln("startup");
 
   /* USER CODE END 2 */
 

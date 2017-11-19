@@ -55,6 +55,7 @@
 #include "stm32f4xx_hal.h"
 #include <string.h>
 #include "SICL.h"
+#include "gps.h"
 #include "flight_data.h"
 /* USER CODE END Includes */
 
@@ -71,6 +72,7 @@ uint8_t last=0;
 char tmp=0;
 static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
 TaskHandle_t ltmTaskHandle = NULL;
+TaskHandle_t gpsTaskHandle = NULL;
 //extern osThreadId  siclNMEATaskHandle = NULL;
 char SICL_RX[64];
 
@@ -138,6 +140,7 @@ void MX_FREERTOS_Init(void) {
 
 //  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
   xTaskCreate(TMLTM_TX, "LowSpeedTelemetry TX", 500, NULL, osPriorityNormal, &ltmTaskHandle);
+  xTaskCreate(GPS_Process, "GPS data RX", 500, NULL, osPriorityNormal, &gpsTaskHandle);
   xTaskCreate(proba2, "p2", 1500, NULL, 2, &xTask2);
   /* USER CODE END RTOS_THREADS */
 
@@ -240,12 +243,16 @@ void mainTimerCallback(TimerHandle_t xTimer)
 {
   /* USER CODE BEGIN mainTimerCallback */
 	period++;
-	if( period > 20 )
+	if( period > 31 )
 	{
-		sendStatus("zeroing");
+		sendStatusln("zeroing");
 		period = 0;
 	}
 	if( (period%10) == 0)
+	{
+		xTaskNotifyGive( gpsTaskHandle );
+	}
+	if( (period%15) == 0)
 	{
 		xTaskNotifyGive( ltmTaskHandle );
 	}
