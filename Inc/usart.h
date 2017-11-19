@@ -86,6 +86,7 @@ void MX_USART3_UART_Init(void);
 
 void sendStatus(char* msg);
 void sendError(char* msg);
+void sendDebug(char* msg);
 
 /* USER CODE END Prototypes */
 

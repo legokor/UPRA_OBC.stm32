@@ -25,7 +25,6 @@ IWDG_HandleTypeDef hiwdg;
 int SICL_TX_msg(char* cmd, char* msg)
 {
 	int msg_len = 3; // = strlen(cmd) + strlen(msg) + 6;
-	int i=0;
 
 	// $TM cmd , msg * cc
 	// 012 345 6
@@ -51,13 +50,14 @@ int SICL_TX_msg(char* cmd, char* msg)
 }
 
 void SICL_NMEA_parser(void)
+// TODO : add checksum check
 {
 	int i, j, k, IntegerPart;
 
 
 	IntegerPart = 1;
 
-
+	// TCHKD - COM house-keeping msg processing
 	if ((SICL.RX[1] == 'T') && (SICL.RX[2] == 'C') && (SICL.RX[3] == 'H') && (SICL.RX[4] == 'K') && (SICL.RX[5] == 'D'))
 	{
 		com.temp = 0;
@@ -107,7 +107,37 @@ void SICL_NMEA_parser(void)
 				}
 			}
 		}
+		return;
 	}
+	// CMDTA - UPRA-CAM datastream porcessing
+	if ((SICL.RX[1] == 'C') && (SICL.RX[2] == 'M') && (SICL.RX[3] == 'D') && (SICL.RX[4] == 'T') && (SICL.RX[5] == 'A'))
+	{
+		for (i=0, j=0, k=0; (i<SICL.RXindex) && (j<10); i++)
+		{
+			if (SICL.RX[i] == ',')
+			{
+				j++;    // Segment index
+				k=0;    // Index into target variable
+				IntegerPart = 1;
+			}
+			else
+			{
+				if (j == 1)
+				{
+					if(SICL.RX[i] == 'S')
+					{
+						// TODO : start image dumping
+					}
+					else if(SICL.RX[i] == '*')
+					{
+						j++;
+					}
+				}
+			}
+		}
+		return;
+	}
+
 }
 
 void clearSICL_RX(void)

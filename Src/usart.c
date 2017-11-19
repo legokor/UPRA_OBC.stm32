@@ -211,6 +211,15 @@ void sendError(char* msg)
 
 }
 
+void sendDebug(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s\n\r%s", KCYN, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
 /* USER CODE END 1 */
 
 /**
