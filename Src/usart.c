@@ -53,7 +53,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN 0 */
-
+#include <stdio.h>
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -192,6 +192,24 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+
+void sendStatus(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s\n\r%s", KGRN, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
+void sendError(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s\n\r%s", KRED, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
 
 /* USER CODE END 1 */
 

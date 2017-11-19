@@ -25,6 +25,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+
 typedef struct
 {
 	char RX[82];
@@ -42,7 +43,7 @@ typedef enum
 
 /* Private function prototypes -----------------------------------------------*/
 int SICL_TX_msg(char* cmd, char* msg);
-void SICL_NMEA_parser(void const * argument);
+void SICL_NMEA_parser(void);
 void TMLTM_TX(void const * argument);
 void getTChousekeeping(submodule module);
 

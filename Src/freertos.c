@@ -71,6 +71,7 @@ uint8_t last=0;
 char tmp=0;
 static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
 TaskHandle_t ltmTaskHandle = NULL;
+//extern osThreadId  siclNMEATaskHandle = NULL;
 char SICL_RX[64];
 
 int period = 0;
@@ -239,9 +240,13 @@ void mainTimerCallback(TimerHandle_t xTimer)
 {
   /* USER CODE BEGIN mainTimerCallback */
 	period++;
-	if( period > 10)
+	if( period > 20 )
 	{
+		sendStatus("zeroing");
 		period = 0;
+	}
+	if( (period%10) == 0)
+	{
 		xTaskNotifyGive( ltmTaskHandle );
 	}
 

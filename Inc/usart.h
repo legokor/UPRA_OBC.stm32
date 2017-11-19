@@ -66,6 +66,15 @@ extern UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN Private defines */
 
+#define KNRM  "\x1B[0m"		//normal
+#define KRED  "\x1B[31m"	//red
+#define KGRN  "\x1B[32m"	//green
+#define KYEL  "\x1B[33m"	//yellow
+#define KBLU  "\x1B[34m"	//blue
+#define KMAG  "\x1B[35m"	//magenta
+#define KCYN  "\x1B[36m"	//cyan
+#define KWHT  "\x1B[37m"	//white
+
 /* USER CODE END Private defines */
 
 extern void _Error_Handler(char *, int);
@@ -74,6 +83,9 @@ void MX_USART2_UART_Init(void);
 void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+void sendStatus(char* msg);
+void sendError(char* msg);
 
 /* USER CODE END Prototypes */
 
