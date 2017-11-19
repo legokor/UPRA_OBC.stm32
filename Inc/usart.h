@@ -90,6 +90,8 @@ void sendDebug(char* msg);
 void sendStatusln(char* msg);
 void sendErrorln(char* msg);
 void sendDebugln(char* msg);
+void sendDebugch(char msg);
+
 
 /* USER CODE END Prototypes */
 

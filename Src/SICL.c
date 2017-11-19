@@ -236,6 +236,7 @@ void TMLTM_TX(void const * argument)
 	for(;;)
 	{
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		vTaskSuspendAll();
 		HAL_IWDG_Refresh(&hiwdg);
 		getTChousekeeping(COM);
 
@@ -245,6 +246,7 @@ void TMLTM_TX(void const * argument)
 
 		SICL_TX_msg("LTM", (char*)tmp);
 		HAL_IWDG_Refresh(&hiwdg);
+		xTaskResumeAll();
 
 	}
 

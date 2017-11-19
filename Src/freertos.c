@@ -245,7 +245,7 @@ void mainTimerCallback(TimerHandle_t xTimer)
 	period++;
 	if( period > 31 )
 	{
-		sendStatusln("zeroing");
+		sendDebugln("zeroing");
 		period = 0;
 	}
 	if( (period%10) == 0)

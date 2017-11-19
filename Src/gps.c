@@ -29,6 +29,7 @@
 
 /***************************************************** DEFINES ******************************************************/
 /********************************************************************************************************************/
+#define TIMESYNCTIMEOUT					0x00001fff//0x00001fff
 
 /************************************************ TYPE DEFINITIONS **************************************************/
 /********************************************************************************************************************/
@@ -42,12 +43,39 @@ IWDG_HandleTypeDef hiwdg;
 /****************************************** LOCAL FUNCTION DECLARATIONS *********************************************/
 /********************************************************************************************************************/
 int GPS_NMEA_parser(void);
-int getGPS(void);
+char getGPS(void);
+int getGGA(void);
 void clearGPS_Buffer(void);
 char CheckNSEW(char nsew);
+void sendUBX(uint8_t *MSG, int len);
+int getUBX_ACK(uint8_t* MSG);
+int setGPS_PORT(void);
+int setGPS_DynamicModel6(void);
 
 /********************************************* FUNCTION DEFINITIONS *************************************************/
 /********************************************************************************************************************/
+
+void InitGPS(void)
+{
+	int ret = 100;
+
+	sendStatus("OBC: Init GPS...");
+	HAL_IWDG_Refresh(&hiwdg);
+	ret = setGPS_DynamicModel6();
+	if( ret != 0)
+	{
+		sendError("DM_error...");
+	}
+	HAL_IWDG_Refresh(&hiwdg);
+	ret = setGPS_PORT();
+	if( ret !=0)
+	{
+		sendErrorln("PRT_error");
+		return;
+	}
+	HAL_IWDG_Refresh(&hiwdg);
+	sendStatusln("OK");
+}
 
 void clearGPS_Buffer(void)
 {
@@ -58,7 +86,7 @@ void clearGPS_Buffer(void)
 	TM.GPSIndex = 0;
 }
 
-int getGPS(void)
+/*int getGPS(void)
 {
 	char tmp=0;
 	clearGPS_Buffer();
@@ -66,10 +94,11 @@ int getGPS(void)
 
 	for(;;)
 	{
+		HAL_IWDG_Refresh(&hiwdg);
 		if(HAL_UART_Receive(&huart2, (uint8_t*)&tmp, 1, 500) == HAL_OK)
 		{
-			HAL_IWDG_Refresh(&hiwdg);
-			if ((tmp =='$') || (TM.GPSIndex >= 80))
+//			HAL_IWDG_Refresh(&hiwdg);
+			if ((tmp =='$') || (TM.GPSIndex >= 200))
 		    {
 		      TM.GPSIndex = 0;
 		    }
@@ -81,25 +110,140 @@ int getGPS(void)
 
 		    if (tmp == '\n')
 		    {
-		    	GPS_NMEA_parser();
-
+		    	sendDebug(TM.GPSBuffer);
 		    	return 0;
 		    }
-		    HAL_IWDG_Refresh(&hiwdg);
 		}
 		else
 		{
 			HAL_IWDG_Refresh(&hiwdg);
 			timeout++;
-			if(timeout > 3)
+			if(timeout > 10)
 			{
-				sendError("GPS line timeout...");
+				sendError("lTO...");
 				return 1;
 			}
 		}
 	}
 	return 3;
 }
+*/
+
+
+// read from GPS port
+char getGPS(void)
+{
+	char tmp=0;
+	int timeout=0;
+
+	for(;;)
+	{
+		HAL_IWDG_Refresh(&hiwdg);
+		if(HAL_UART_Receive(&huart2, (uint8_t*)&tmp, 1, 100) == HAL_OK)
+		{
+			return (char)tmp;
+		}
+		else
+		{
+			HAL_IWDG_Refresh(&hiwdg);
+			timeout++;
+			if(timeout > 10)
+			{
+				sendError("lTO...");
+				return 0;
+			}
+		}
+	}
+	return 3;
+}
+
+//get a GGA message
+int get_GGA()
+{
+	char inByte;
+	int i=0;
+	long int wtchdg=0;
+//	sendUSARTstr("get_gga\r\n");
+	TM.GPSIndex = 0;
+	while (1)
+	{
+		inByte = getGPS();
+		HAL_IWDG_Refresh(&hiwdg);
+		if ((inByte =='$') || (TM.GPSIndex >= 80))
+		{
+			TM.GPSIndex = 0;
+			TM.GPSBuffer[TM.GPSIndex] = inByte;
+			inByte = getGPS();
+			sendDebugch(inByte);
+			HAL_IWDG_Refresh(&hiwdg);
+			if((inByte =='G') && (inByte != 0))
+			{
+				TM.GPSBuffer[TM.GPSIndex] = inByte;
+				TM.GPSIndex++;
+				inByte = getGPS();
+				sendDebugch(inByte);
+				HAL_IWDG_Refresh(&hiwdg);
+				if((inByte =='P') && (inByte != 0))
+				{
+					TM.GPSBuffer[TM.GPSIndex] = inByte;
+					TM.GPSIndex++;
+					inByte = getGPS();
+					sendDebugch(inByte);
+					HAL_IWDG_Refresh(&hiwdg);
+					if((inByte =='G') && (inByte != 0))
+					{
+						TM.GPSBuffer[TM.GPSIndex] = inByte;
+						TM.GPSIndex++;
+						inByte = getGPS();
+						sendDebugch(inByte);
+						HAL_IWDG_Refresh(&hiwdg);
+
+						if((inByte =='G') && (inByte != 0))
+						{
+							TM.GPSBuffer[TM.GPSIndex] = inByte;
+							TM.GPSIndex++;
+							inByte = getGPS();
+							sendDebugch(inByte);
+							HAL_IWDG_Refresh(&hiwdg);
+
+							if((inByte =='A') && (inByte != 0))
+							{
+								inByte = getGPS();
+								TM.GPSBuffer[TM.GPSIndex] = inByte;
+								TM.GPSIndex++;
+								HAL_IWDG_Refresh(&hiwdg);
+
+								for( i = TM.GPSIndex;((TM.GPSIndex>80) || (inByte != '\r')); i++)
+//								for( ;((TM.GPSIndex>80) || (inByte != '\r')); TM.GPSIndex++)
+								{
+									inByte = getGPS();
+									sendDebugch(inByte);
+									if(inByte != 0)
+									{
+										TM.GPSBuffer[i] = inByte;
+										TM.GPSIndex++;
+									}
+									HAL_IWDG_Refresh(&hiwdg);
+								}
+								return 0;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (wtchdg > 100)
+		{
+			return 1;
+		}
+
+		wtchdg++;
+
+	}
+
+}
+
 
 int GPS_NMEA_parser(void)
 {
@@ -232,6 +376,7 @@ int GPS_NMEA_parser(void)
 		return 0;
 	}
 	sendStatus("...");
+	//HAL_Delay(5);
 	return 1;
 }
 
@@ -263,18 +408,178 @@ void GPS_Process(void const * argument)
 		HAL_IWDG_Refresh(&hiwdg);
 		while(ret != 0)
 		{
+			sendDebug("w");
 			timeout++;
-			if(timeout >5)
+			if(timeout >10)
 			{
 				sendErrorln("GPS-GGA timeout");
 				break;
 			}
 			HAL_IWDG_Refresh(&hiwdg);
-			ret = getGPS();
+			ret = get_GGA();
 		}
 		HAL_IWDG_Refresh(&hiwdg);
+		GPS_NMEA_parser();
+	}
+}
+
+
+void sendUBX(uint8_t* MSG, int len)
+{
+	int i=0;
+
+	HAL_UART_Abort(&huart2);
+	if (HAL_UART_Transmit(&huart2, (uint8_t*)(0xFF), 1, 500) != HAL_OK)
+	{
+		sendDebug("this shall not be seen");
+		return;
+	}
+
+	HAL_Delay(500);
+//	delay(5);
+	for(i=0; i<len; i++)
+	{
+		if (HAL_UART_Transmit(&huart2, (uint8_t*)MSG[i], 1, 500) != HAL_OK)
+		{
+			sendDebug("this shall not be seen either");
+			return;
+		}
+//	HAL_UART_Transmit(&huart2, (uint8_t*)MSG, strlen((char*)MSG), 500);
+
+//		USART_SendData(USART2, MSG[i]);
+	}
+}
+
+//NEO6M SETTINGS
+
+int setGPS_DynamicModel6(void)
+{
+	int gps_set_sucess=0;
+	int wtchdg=0;
+	char start[] = { 0xFF, '\0'};
+	uint8_t setdm6[] = {
+						0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06,
+						0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
+						0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C,
+						0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC };
+
+	sendDebug("dm");
+	while(!gps_set_sucess)
+	{
+		sendDebug(".");
+		HAL_IWDG_Refresh(&hiwdg);
+		sendUBX(setdm6, sizeof(setdm6)/sizeof(char));
+		sendDebug(".");
+		gps_set_sucess=getUBX_ACK(setdm6);
+		wtchdg++;
+		if( wtchdg > 3) //32700
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int setGPS_PORT(void)
+{
+	int gps_set_sucess=0;
+	int wtchdg=0;
+	char start[] = { 0xFF, '\0'};
+	uint8_t setport[] = {
+						0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00,
+						0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00,
+						0x07, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA1,
+						0xAF };
+
+
+	sendDebug("prt");
+	while(!gps_set_sucess)
+	{
+		HAL_IWDG_Refresh(&hiwdg);
+		sendDebug(".");
+		sendUBX(setport, sizeof(setport)/sizeof(char));
+		sendDebug(".");
+		gps_set_sucess=getUBX_ACK(setport);
+		wtchdg++;
+		if( wtchdg > 3) //32700
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int getUBX_ACK(uint8_t* MSG)
+{
+	uint32_t 		wtchdg=0;
+	char	 		b;
+	int 			ackByteID = 0;
+	uint8_t	 		ackPacket[10];
+	int		 		ubxi;
+
+	// Construct the expected ACK packet
+	ackPacket[0] = 0xB5; // header
+	ackPacket[1] = 0x62; // header
+	ackPacket[2] = 0x05; // class
+	ackPacket[3] = 0x01; // id
+	ackPacket[4] = 0x02; // length
+	ackPacket[5] = 0x00;
+	ackPacket[6] = MSG[2]; // ACK class
+	ackPacket[7] = MSG[3]; // ACK id
+	ackPacket[8] = 0; // CK_A
+	ackPacket[9] = 0; // CK_B
+
+	// Calculate the checksums
+	for (ubxi=2; ubxi<8; ubxi++)
+	{
+		ackPacket[8] = ackPacket[8] + ackPacket[ubxi];
+		ackPacket[9] = ackPacket[9] + ackPacket[8];
+	}
+
+	HAL_IWDG_Refresh(&hiwdg);
+
+	while (1)
+	{
+		// Test for success
+
+		if(HAL_UART_Receive(&huart2, (uint8_t*)&b, 1, 100) == HAL_OK)
+		{
+			sendDebug("!");
+			HAL_IWDG_Refresh(&hiwdg);
+			if (ackByteID > 9)
+			{
+				// All packets in order!
+				return 1;
+			}
+
+			// Timeout if no valid response in 3 seconds
+			if (wtchdg > (20))
+			{
+				return 0;
+			}
+			wtchdg++;
+			// Make sure data is available to read
+
+			// Check that bytes arrive in sequence as per expected ACK packet
+			if (b == ackPacket[ackByteID])
+			{
+				ackByteID++;
+			}
+			else
+			{
+				ackByteID = 0; // Reset and look again, invalid order
+			}			//b = getGPS();
+			HAL_IWDG_Refresh(&hiwdg);
+		}
 
 	}
 }
+
+
+
+
+
+
 
 /* USER CODE END 0 */
