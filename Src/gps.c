@@ -157,6 +157,23 @@ char getGPS(void)
 	return 3;
 }
 
+/*char getGPS(void)
+{
+	char tmp=0;
+	int timeout=0;
+
+	while(((huart2.Instance->SR) & UART_FLAG_RXNE) == RESET)
+	{
+
+	}
+	tmp = huart2.Instance->DR;
+
+	return tmp;
+
+	return 3;
+}*/
+
+
 //get a GGA message
 int get_GGA()
 {
@@ -168,34 +185,36 @@ int get_GGA()
 	while (1)
 	{
 		inByte = getGPS();
+		//sendDebugch(inByte);
 		HAL_IWDG_Refresh(&hiwdg);
 		if ((inByte =='$') || (TM.GPSIndex >= 80))
 		{
 			TM.GPSIndex = 0;
 			TM.GPSBuffer[TM.GPSIndex] = inByte;
+			TM.GPSIndex++;
 			inByte = getGPS();
-			sendDebugch(inByte);
+			//sendDebugch(inByte);
 			HAL_IWDG_Refresh(&hiwdg);
 			if((inByte =='G') && (inByte != 0))
 			{
 				TM.GPSBuffer[TM.GPSIndex] = inByte;
 				TM.GPSIndex++;
 				inByte = getGPS();
-				sendDebugch(inByte);
+				//sendDebugch(inByte);
 				HAL_IWDG_Refresh(&hiwdg);
 				if((inByte =='P') && (inByte != 0))
 				{
 					TM.GPSBuffer[TM.GPSIndex] = inByte;
 					TM.GPSIndex++;
 					inByte = getGPS();
-					sendDebugch(inByte);
+					//sendDebugch(inByte);
 					HAL_IWDG_Refresh(&hiwdg);
 					if((inByte =='G') && (inByte != 0))
 					{
 						TM.GPSBuffer[TM.GPSIndex] = inByte;
 						TM.GPSIndex++;
 						inByte = getGPS();
-						sendDebugch(inByte);
+						//sendDebugch(inByte);
 						HAL_IWDG_Refresh(&hiwdg);
 
 						if((inByte =='G') && (inByte != 0))
@@ -203,12 +222,12 @@ int get_GGA()
 							TM.GPSBuffer[TM.GPSIndex] = inByte;
 							TM.GPSIndex++;
 							inByte = getGPS();
-							sendDebugch(inByte);
+							//sendDebugch(inByte);
 							HAL_IWDG_Refresh(&hiwdg);
 
 							if((inByte =='A') && (inByte != 0))
 							{
-								inByte = getGPS();
+								//inByte = getGPS();
 								TM.GPSBuffer[TM.GPSIndex] = inByte;
 								TM.GPSIndex++;
 								HAL_IWDG_Refresh(&hiwdg);
@@ -217,7 +236,7 @@ int get_GGA()
 //								for( ;((TM.GPSIndex>80) || (inByte != '\r')); TM.GPSIndex++)
 								{
 									inByte = getGPS();
-									sendDebugch(inByte);
+									//sendDebugch(inByte);
 									if(inByte != 0)
 									{
 										TM.GPSBuffer[i] = inByte;
@@ -398,28 +417,47 @@ char CheckNSEW(char nsew)
 void GPS_Process(void const * argument)
 {
 	int ret = 10;
+	int ret_gga = 10;
 	int timeout = 0;
+	int timeout2 = 0;
 	for(;;)
 	{
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		vTaskSuspendAll();
 		ret = 10;
+		ret_gga = 10;
 		timeout = 0;
+		timeout2 = 0;
 		sendStatus("OBC: Get GPS...");
 		HAL_IWDG_Refresh(&hiwdg);
-		while(ret != 0)
+		while(ret_gga != 0)
 		{
-			sendDebug("w");
-			timeout++;
-			if(timeout >10)
+			while(ret != 0)
 			{
-				sendErrorln("GPS-GGA timeout");
+//				sendDebug("w");
+				timeout++;
+				if(timeout >10)
+				{
+					sendErrorln("PORT timeout");
+					break;
+				}
+				HAL_IWDG_Refresh(&hiwdg);
+				ret = get_GGA();
+				//sendDebugln(TM.GPSBuffer);
+			}
+			ret = 10;
+			timeout=0;
+			HAL_IWDG_Refresh(&hiwdg);
+			timeout2++;
+			if(timeout2 >10)
+			{
+				sendErrorln("No GPGAA");
 				break;
 			}
-			HAL_IWDG_Refresh(&hiwdg);
-			ret = get_GGA();
+			ret_gga = GPS_NMEA_parser();
+
 		}
-		HAL_IWDG_Refresh(&hiwdg);
-		GPS_NMEA_parser();
+		xTaskResumeAll();
 	}
 }
 
@@ -437,17 +475,17 @@ void sendUBX(uint8_t* MSG, int len)
 
 	HAL_Delay(500);
 //	delay(5);
-	for(i=0; i<len; i++)
+/*	for(i=0; i<len; i++)
 	{
 		if (HAL_UART_Transmit(&huart2, (uint8_t*)MSG[i], 1, 500) != HAL_OK)
 		{
 			sendDebug("this shall not be seen either");
 			return;
-		}
-//	HAL_UART_Transmit(&huart2, (uint8_t*)MSG, strlen((char*)MSG), 500);
+		}*/
+		HAL_UART_Transmit(&huart2, &MSG, len, 500);
 
 //		USART_SendData(USART2, MSG[i]);
-	}
+//	}
 }
 
 //NEO6M SETTINGS
