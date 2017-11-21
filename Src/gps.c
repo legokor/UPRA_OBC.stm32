@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "flight_data.h"
 #include "usart.h"
+#include "stm32f4xx_hal.h"
 
 /***************************************************** DEFINES ******************************************************/
 /********************************************************************************************************************/
@@ -67,6 +68,8 @@ void InitGPS(void)
 		sendError("DM_error...");
 	}
 	HAL_IWDG_Refresh(&hiwdg);
+	ret = 100;
+	HAL_Delay(500);
 	ret = setGPS_PORT();
 	if( ret !=0)
 	{
@@ -157,30 +160,13 @@ char getGPS(void)
 	return 3;
 }
 
-/*char getGPS(void)
-{
-	char tmp=0;
-	int timeout=0;
-
-	while(((huart2.Instance->SR) & UART_FLAG_RXNE) == RESET)
-	{
-
-	}
-	tmp = huart2.Instance->DR;
-
-	return tmp;
-
-	return 3;
-}*/
-
-
 //get a GGA message
-int get_GGA()
+int getGGA()
 {
 	char inByte;
 	int i=0;
 	long int wtchdg=0;
-//	sendUSARTstr("get_gga\r\n");
+//	sendUSARTstr("getGGA\r\n");
 	TM.GPSIndex = 0;
 	while (1)
 	{
@@ -442,7 +428,7 @@ void GPS_Process(void const * argument)
 					break;
 				}
 				HAL_IWDG_Refresh(&hiwdg);
-				ret = get_GGA();
+				ret = getGGA();
 				//sendDebugln(TM.GPSBuffer);
 			}
 			ret = 10;
@@ -462,31 +448,45 @@ void GPS_Process(void const * argument)
 }
 
 
-void sendUBX(uint8_t* MSG, int len)
+// lightweight UART msg send for UBLOX module
+
+void sendUBX(uint8_t *MSG, int len)
 {
 	int i=0;
-
-	HAL_UART_Abort(&huart2);
-	if (HAL_UART_Transmit(&huart2, (uint8_t*)(0xFF), 1, 500) != HAL_OK)
+	while(!(huart2.Instance->SR & 0x00000040))
 	{
-		sendDebug("this shall not be seen");
-		return;
-	}
+/*		wtchdg++;
+		#ifdef DIAG
+			sendUSARTstr(".");
+		#endif
 
-	HAL_Delay(500);
-//	delay(5);
-/*	for(i=0; i<len; i++)
-	{
-		if (HAL_UART_Transmit(&huart2, (uint8_t*)MSG[i], 1, 500) != HAL_OK)
+		if( wtchdg > TIMESYNCTIMEOUT)
 		{
-			sendDebug("this shall not be seen either");
-			return;
+			return 1;
 		}*/
-		HAL_UART_Transmit(&huart2, &MSG, len, 500);
+	}
+	huart2.Instance->DR = (0xFF & (uint16_t)0x01FF);
 
-//		USART_SendData(USART2, MSG[i]);
-//	}
+
+	HAL_Delay(5);
+	for(i=0; i<len; i++)
+	{
+		while(!(huart2.Instance->SR & 0x00000040))
+		{
+/*			wtchdg++;
+			#ifdef DIAG
+				sendUSARTstr(".");
+			#endif
+
+			if( wtchdg > TIMESYNCTIMEOUT)
+			{
+				return 1;
+			}*/
+		}
+		huart2.Instance->DR = (MSG[i] & (uint16_t)0x01FF);
+	}
 }
+
 
 //NEO6M SETTINGS
 
@@ -494,7 +494,7 @@ int setGPS_DynamicModel6(void)
 {
 	int gps_set_sucess=0;
 	int wtchdg=0;
-	char start[] = { 0xFF, '\0'};
+//	char start[] = { 0xFF, '\0'};
 	uint8_t setdm6[] = {
 						0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06,
 						0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
@@ -502,13 +502,13 @@ int setGPS_DynamicModel6(void)
 						0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 						0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC };
 
-	sendDebug("dm");
+	sendStatus("...");
 	while(!gps_set_sucess)
 	{
-		sendDebug(".");
+		//sendDebug(".");
 		HAL_IWDG_Refresh(&hiwdg);
 		sendUBX(setdm6, sizeof(setdm6)/sizeof(char));
-		sendDebug(".");
+		//sendDebug(".");
 		gps_set_sucess=getUBX_ACK(setdm6);
 		wtchdg++;
 		if( wtchdg > 3) //32700
@@ -523,7 +523,7 @@ int setGPS_PORT(void)
 {
 	int gps_set_sucess=0;
 	int wtchdg=0;
-	char start[] = { 0xFF, '\0'};
+//	char start[] = { 0xFF, '\0'};
 	uint8_t setport[] = {
 						0xB5, 0x62, 0x06, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00,
 						0x00, 0xD0, 0x08, 0x00, 0x00, 0x80, 0x25, 0x00, 0x00,
@@ -531,13 +531,13 @@ int setGPS_PORT(void)
 						0xAF };
 
 
-	sendDebug("prt");
+	sendStatus("...");
 	while(!gps_set_sucess)
 	{
 		HAL_IWDG_Refresh(&hiwdg);
-		sendDebug(".");
+
 		sendUBX(setport, sizeof(setport)/sizeof(char));
-		sendDebug(".");
+
 		gps_set_sucess=getUBX_ACK(setport);
 		wtchdg++;
 		if( wtchdg > 3) //32700
@@ -580,36 +580,32 @@ int getUBX_ACK(uint8_t* MSG)
 	while (1)
 	{
 		// Test for success
+		b = getGPS();
 
-		if(HAL_UART_Receive(&huart2, (uint8_t*)&b, 1, 100) == HAL_OK)
+		if (ackByteID > 9)
 		{
-			sendDebug("!");
-			HAL_IWDG_Refresh(&hiwdg);
-			if (ackByteID > 9)
-			{
-				// All packets in order!
-				return 1;
-			}
-
-			// Timeout if no valid response in 3 seconds
-			if (wtchdg > (20))
-			{
-				return 0;
-			}
-			wtchdg++;
-			// Make sure data is available to read
-
-			// Check that bytes arrive in sequence as per expected ACK packet
-			if (b == ackPacket[ackByteID])
-			{
-				ackByteID++;
-			}
-			else
-			{
-				ackByteID = 0; // Reset and look again, invalid order
-			}			//b = getGPS();
-			HAL_IWDG_Refresh(&hiwdg);
+			// All packets in order!
+			return 1;
 		}
+
+		// Timeout if no valid response in 3 seconds
+		if (wtchdg > (2000))
+		{
+			return 0;
+		}
+		wtchdg++;
+		// Make sure data is available to read
+
+		// Check that bytes arrive in sequence as per expected ACK packet
+		if (b == ackPacket[ackByteID])
+		{
+			ackByteID++;
+		}
+		else
+		{
+			ackByteID = 0; // Reset and look again, invalid order
+		}
+
 
 	}
 }

@@ -70,13 +70,12 @@ SICL_InitTypeDef SICL;
 
 uint8_t last=0;
 char tmp=0;
-static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
 TaskHandle_t ltmTaskHandle = NULL;
 TaskHandle_t gpsTaskHandle = NULL;
-//extern osThreadId  siclNMEATaskHandle = NULL;
+
 char SICL_RX[64];
 
-int period = 0;
+uint8_t period = 0;
 
 TimerHandle_t mainTimer;
 /* USER CODE END Variables */
@@ -141,8 +140,7 @@ void MX_FREERTOS_Init(void) {
 //  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
   xTaskCreate(TMLTM_TX, "LowSpeedTelemetry TX", 500, NULL, osPriorityNormal, &ltmTaskHandle);
   xTaskCreate(GPS_Process, "GPS data RX", 500, NULL, osPriorityNormal, &gpsTaskHandle);
-  xTaskCreate(proba2, "p2", 1500, NULL, 2, &xTask2);
-  /* USER CODE END RTOS_THREADS */
+   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -199,19 +197,6 @@ void SICL_process(void const * argument)
 
 }
 
-void proba1(void const * argument)
-{
-    for( ;; )
-    {
-        /* Send a notification to prvTask2(), bringing it out of the Blocked
-        state. */
-    	HAL_UART_Transmit(&huart3, (uint8_t*)"task1\n\r", 7, 100);
-    	xTaskNotifyGive( xTask2 );
-    	osDelay(200);
-        /* Block to wait for prvTask2() to notify this task. */
-        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-    }
-}
 
 void proba2(void const * argument)
 {
@@ -243,11 +228,11 @@ void mainTimerCallback(TimerHandle_t xTimer)
 {
   /* USER CODE BEGIN mainTimerCallback */
 	period++;
-	if( period > 31 )
+/*	if( period > 31 )
 	{
 		sendDebugln("zeroing");
 		period = 0;
-	}
+	}*/
 	if( (period%10) == 0)
 	{
 		xTaskNotifyGive( gpsTaskHandle );
