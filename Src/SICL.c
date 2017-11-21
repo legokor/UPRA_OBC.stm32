@@ -186,7 +186,7 @@ int SICL_RX_msg(void)
 		    	SICL_NMEA_parser();
 
 				sprintf((char*)debug, "OBC: com temp: %d, com VCC: %d, message#: %d", com.temp, com.VCC, TM.msg_count);
-				sendStatus((char*)debug);
+				sendStatusln((char*)debug);
 				//HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100); //debug only
 		    	return 0; //for debug only
 		    	//SICL.RXindex = 0;
@@ -199,7 +199,7 @@ int SICL_RX_msg(void)
 			timeout++;
 			if(timeout > 3)
 			{
-				sendError("OBC: HK request timeout");
+				sendErrorln("OBC: HK request timeout");
 				return 1;
 			}
 		}
@@ -236,6 +236,7 @@ void TMLTM_TX(void const * argument)
 	for(;;)
 	{
 		ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+		vTaskSuspendAll();
 		HAL_IWDG_Refresh(&hiwdg);
 		getTChousekeeping(COM);
 
@@ -245,6 +246,7 @@ void TMLTM_TX(void const * argument)
 
 		SICL_TX_msg("LTM", (char*)tmp);
 		HAL_IWDG_Refresh(&hiwdg);
+		xTaskResumeAll();
 
 	}
 

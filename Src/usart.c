@@ -54,6 +54,7 @@
 
 /* USER CODE BEGIN 0 */
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart2;
@@ -197,7 +198,7 @@ void sendStatus(char* msg)
 {
 	char* debug[64];
 
-	sprintf((char*)debug, "%s%s\n\r%s", KGRN, msg, KNRM);
+	sprintf((char*)debug, "%s%s%s", KGRN, msg, KNRM);
 	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
 
 }
@@ -206,12 +207,48 @@ void sendError(char* msg)
 {
 	char* debug[64];
 
-	sprintf((char*)debug, "%s%s\n\r%s", KRED, msg, KNRM);
+	sprintf((char*)debug, "%s%s%s", KRED, msg, KNRM);
 	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
 
 }
 
 void sendDebug(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s%s", KCYN, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
+void sendDebugch(char msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%c%s", KCYN, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
+void sendStatusln(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s\n\r%s", KGRN, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
+void sendErrorln(char* msg)
+{
+	char* debug[64];
+
+	sprintf((char*)debug, "%s%s\n\r%s", KRED, msg, KNRM);
+	HAL_UART_Transmit(&huart3, (uint8_t*)debug, strlen((char*)debug), 100);
+
+}
+
+void sendDebugln(char* msg)
 {
 	char* debug[64];
 

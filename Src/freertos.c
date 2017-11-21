@@ -55,6 +55,7 @@
 #include "stm32f4xx_hal.h"
 #include <string.h>
 #include "SICL.h"
+#include "gps.h"
 #include "flight_data.h"
 /* USER CODE END Includes */
 
@@ -69,12 +70,12 @@ SICL_InitTypeDef SICL;
 
 uint8_t last=0;
 char tmp=0;
-static TaskHandle_t xTask1 = NULL, xTask2 = NULL;
 TaskHandle_t ltmTaskHandle = NULL;
-//extern osThreadId  siclNMEATaskHandle = NULL;
+TaskHandle_t gpsTaskHandle = NULL;
+
 char SICL_RX[64];
 
-int period = 0;
+uint8_t period = 0;
 
 TimerHandle_t mainTimer;
 /* USER CODE END Variables */
@@ -138,8 +139,8 @@ void MX_FREERTOS_Init(void) {
 
 //  xTaskCreate(SICL_process, "SICL_RX", 500, NULL, osPriorityNormal, &commTaskHandle);
   xTaskCreate(TMLTM_TX, "LowSpeedTelemetry TX", 500, NULL, osPriorityNormal, &ltmTaskHandle);
-  xTaskCreate(proba2, "p2", 1500, NULL, 2, &xTask2);
-  /* USER CODE END RTOS_THREADS */
+  xTaskCreate(GPS_Process, "GPS data RX", 500, NULL, osPriorityNormal, &gpsTaskHandle);
+   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -196,19 +197,6 @@ void SICL_process(void const * argument)
 
 }
 
-void proba1(void const * argument)
-{
-    for( ;; )
-    {
-        /* Send a notification to prvTask2(), bringing it out of the Blocked
-        state. */
-    	HAL_UART_Transmit(&huart3, (uint8_t*)"task1\n\r", 7, 100);
-    	xTaskNotifyGive( xTask2 );
-    	osDelay(200);
-        /* Block to wait for prvTask2() to notify this task. */
-        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-    }
-}
 
 void proba2(void const * argument)
 {
@@ -240,12 +228,16 @@ void mainTimerCallback(TimerHandle_t xTimer)
 {
   /* USER CODE BEGIN mainTimerCallback */
 	period++;
-	if( period > 20 )
+/*	if( period > 31 )
 	{
-		sendStatus("zeroing");
+		sendDebugln("zeroing");
 		period = 0;
-	}
+	}*/
 	if( (period%10) == 0)
+	{
+		xTaskNotifyGive( gpsTaskHandle );
+	}
+	if( (period%15) == 0)
 	{
 		xTaskNotifyGive( ltmTaskHandle );
 	}
